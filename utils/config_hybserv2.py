@@ -10,7 +10,9 @@ import os
 from path import path
 import yaml
 
-NOW_UNIX = datetime.now().strftime("%s")
+NOW = datetime.now()
+NOW_UNIX = NOW.strftime("%s")
+NOW_HUMAN =NOW.strftime("%a %b %d %H:%M:%S %Y")
 ROOT_PATH = path(__file__).abspath().dirname()
 CONFIG_FILE = ROOT_PATH.joinpath('config.yaml')
 
@@ -73,14 +75,14 @@ def nick_db_entry(nickconfig):
     return output
 
 def write_nickdb(nickdbfile, nicks):
-    header = "; Hybserv2 NickServ database auto-generated from edX data on {}\n".format(datetime.now().strftime("%a %b %d %H:%M:%S %Y"))
+    header = "; Hybserv2 NickServ database auto-generated from edX data on {}\n".format(NOW_HUMAN)
     with open(nickdbfile, 'wb') as dbfile:
         dbfile.write(header)
         for nick in sorted(nicks.keys()):
             dbfile.write(nick_db_entry(nicks[nick]))
 
 def write_chandb(chandbfile, channels):
-    header = "; Hybserv2 ChanServ database auto-generated from edX data on {}\n".format(datetime.now().strftime("%a %b %d %H:%M:%S %Y"))
+    header = "; Hybserv2 ChanServ database auto-generated from edX data on {}\n".format(NOW_HUMAN)
     with open(chandbfile, 'wb') as dbfile:
         dbfile.write(header)
         for ircchan in sorted(channels.keys()):
