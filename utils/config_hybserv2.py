@@ -198,6 +198,11 @@ def get_parsed_args():
         default=CONFIG_FILE,
         help="path to course admin configuration",
     )
+    parser.add_argument(
+        '--suffix',
+        default='.new',
+        help='output_file = input_file + suffix',
+    )
     return parser.parse_args()
 
 def main():
@@ -210,8 +215,8 @@ def main():
 
     nicks, chans = merge_dbs_configs(nicks, chans, config)
 
-    write_nickdb(args.nickfile+'.new', nicks)
-    write_chandb(args.chanfile+'.new', chans)
+    write_nickdb(args.nickfile + args.suffix, nicks)
+    write_chandb(args.chanfile + args.suffix, chans)
 
 if __name__ == "__main__":
     main()
