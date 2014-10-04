@@ -29,18 +29,34 @@ def add_users_to(userslist, nicks={}):
     def_hostline = "->HOST *~webchat@*.us-west-1.compute.internal"
     for username, cleartext in userslist:
         if not nicks.has_key(username):
-            nicks[username] = {'nick': username, 'interval': 14600, 'ctime': NOW_UNIX,
-                               'seen': NOW_UNIX, 'otherlines': [def_hostline]}
+            nicks[username] = {
+                'nick': username,
+                'interval': 14600,
+                'ctime': NOW_UNIX,
+                'seen': NOW_UNIX,
+                'otherlines': [
+                    def_hostline
+                ],
+            }
         nicks[username]['pass'] = __crypt_cleartext(cleartext)
     return nicks
 
 def add_channels_to(chanupdates, chandata={}):
     new_chandata = chandata.copy()
-    defaults = {'channel': '', 'dummy0': '4', 'founded': NOW_UNIX, 'updated': NOW_UNIX,
-                'otherlines': ['->FNDR sysop {}'.format(NOW_UNIX),
-                               '->PASS LZ5SxAssB3LX2',
-                               '->ALVL -1 5 8 5 5 8 10 10 10 8 15 20 25 40 50'],
-                'ops_users': {'sysop': (None, '50', NOW_UNIX, NOW_UNIX, '*As')}}
+    defaults = {
+        'channel': '',
+        'dummy0': '4',
+        'founded': NOW_UNIX,
+        'updated': NOW_UNIX,
+        'otherlines': [
+            '->FNDR sysop {}'.format(NOW_UNIX),
+            '->PASS LZ5SxAssB3LX2',
+            '->ALVL -1 5 8 5 5 8 10 10 10 8 15 20 25 40 50',
+        ],
+        'ops_users': {
+            'sysop': (None, '50', NOW_UNIX, NOW_UNIX, '*As'),
+        }
+    }
     for update_data in chanupdates:
         channel = update_data['channel']
         if new_chandata.has_key(channel):
@@ -92,7 +108,13 @@ def read_nickdb(nickdbfile):
                 nick, interval, ctime, seen = line.split(' ')
                 if nicks.has_key(nick):
                     raise RuntimeError, "Malformed nick.db file detected - {} more than once in file".format(nick)
-                nicks[nick] = {"nick": nick, "interval": interval, "ctime": ctime, "seen": NOW_UNIX, 'otherlines': []}
+                nicks[nick] = {
+                    "nick": nick,
+                    "interval": interval,
+                    "ctime": ctime,
+                    "seen": NOW_UNIX,
+                    'otherlines': [],
+                }
             elif line[:2] == "->":
                 if not nick:
                     raise RuntimeError, "Malformed nick.db file, at least one bad stanza definition"
@@ -113,8 +135,14 @@ def read_chandb(chandbfile):
                 channel, dummy0, founded, updated = line.split(' ')
                 if chans.has_key(channel):
                     raise RuntimeError, "Malformed chan.db file detected - {} more than once in file".format(channel)
-                chans[channel] = {'channel': channel, 'dummy0': dummy0, 'founded': founded, 'updated': NOW_UNIX,
-                                  'ops_users': {}, 'otherlines': []}
+                chans[channel] = {
+                    'channel': channel,
+                    'dummy0': dummy0,
+                    'founded': founded,
+                    'updated': NOW_UNIX,
+                    'ops_users': {},
+                    'otherlines': [],
+                }
             elif line[:2] == "->":
                 if line[:8] == "->ACCESS":
                     splitline = line.split(' ')
@@ -143,7 +171,7 @@ def read_config(cfile=CONFIG_FILE, chandata={}):
     for chan in sorted(chandata.keys()):
         chan = irc_to_course(chan)
         new_config[chan] = [
-                "bad password. update this from https://class.stanford.edu/courses/COURSE_ID_TRIPLE/instructor/api/irc_instructor_auth_token",
+            "bad password. update this from https://class.stanford.edu/courses/COURSE_ID_TRIPLE/instructor/api/irc_instructor_auth_token",
             sorted([x for x in chandata[chan]['ops_users']])]
     if new_config:
         print "Missing file at {}".format(cfile)
@@ -158,7 +186,9 @@ def merge_dbs_configs(nick_db_in, chan_db_in, config):
     """Merge data from config into data from dbs, return new db data."""
     userlist = []
     chanlist = []
-    def_opslist = {'sysop': (None, '50', '1403044603', '1403044603', '*As'),}
+    def_opslist = {
+        'sysop': (None, '50', '1403044603', '1403044603', '*As'),
+    }
     def_useropts = ('~webchat@*', '11', '1403306438', '1405369523', 'sysop')
     for course in sorted(config.keys()):
         coursepass = config[course][0]
@@ -167,7 +197,10 @@ def merge_dbs_configs(nick_db_in, chan_db_in, config):
         for user in courseusers:
             userlist.append((user, coursepass))
             opslist[user] = def_useropts
-        chanlist.append({'channel': course_to_irc(course), 'ops_users': opslist})
+        chanlist.append({
+            'channel': course_to_irc(course),
+            'ops_users': opslist
+        })
     nick_db_out = add_users_to(userlist, nick_db_in)
     chan_db_out = add_channels_to(chanlist, chan_db_in)
     return nick_db_out, chan_db_out
