@@ -17,7 +17,7 @@ CONFIG_FILE = ROOT_PATH.joinpath('config.yaml')
 def __crypt_cleartext(text, salt=None):
     """Return cleartext text, crypted with salt salt."""
     saltChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./"
-    if not salt: 
+    if not salt:
         # Produce a random DES salt
         salt = choice(saltChars) + choice(saltChars)
     return crypt(text, salt)
@@ -29,7 +29,7 @@ def add_users_to(userslist, nicks={}):
     def_hostline = "->HOST *~webchat@*.us-west-1.compute.internal"
     for username, cleartext in userslist:
         if not nicks.has_key(username):
-            nicks[username] = {'nick': username, 'interval': 14600, 'ctime': NOW_UNIX, 
+            nicks[username] = {'nick': username, 'interval': 14600, 'ctime': NOW_UNIX,
                                'seen': NOW_UNIX, 'otherlines': [def_hostline]}
         nicks[username]['pass'] = __crypt_cleartext(cleartext)
     return nicks
@@ -37,7 +37,7 @@ def add_users_to(userslist, nicks={}):
 def add_channels_to(chanupdates, chandata={}):
     new_chandata = chandata.copy()
     defaults = {'channel': '', 'dummy0': '4', 'founded': NOW_UNIX, 'updated': NOW_UNIX,
-                'otherlines': ['->FNDR sysop {}'.format(NOW_UNIX), 
+                'otherlines': ['->FNDR sysop {}'.format(NOW_UNIX),
                                '->PASS LZ5SxAssB3LX2',
                                '->ALVL -1 5 8 5 5 8 10 10 10 8 15 20 25 40 50'],
                 'ops_users': {'sysop': (None, '50', NOW_UNIX, NOW_UNIX, '*As')}}
@@ -113,7 +113,7 @@ def read_chandb(chandbfile):
                 channel, dummy0, founded, updated = line.split(' ')
                 if chans.has_key(channel):
                     raise RuntimeError, "Malformed chan.db file detected - {} more than once in file".format(channel)
-                chans[channel] = {'channel': channel, 'dummy0': dummy0, 'founded': founded, 'updated': NOW_UNIX, 
+                chans[channel] = {'channel': channel, 'dummy0': dummy0, 'founded': founded, 'updated': NOW_UNIX,
                                   'ops_users': {}, 'otherlines': []}
             elif line[:2] == "->":
                 if line[:8] == "->ACCESS":
@@ -132,8 +132,8 @@ def read_chandb(chandbfile):
 
 def read_config(cfile=CONFIG_FILE, chandata={}):
     """Read channel configuration from cfile, use settings to shadow vars in shadow.
-    
-    If no configuration file found at specified path, and if chandata is non-empty, 
+
+    If no configuration file found at specified path, and if chandata is non-empty,
     a new configuration file containing chandata will be created."""
     if os.path.exists(cfile):
         with open(cfile, 'rb') as c:
