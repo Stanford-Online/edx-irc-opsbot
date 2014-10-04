@@ -180,9 +180,12 @@ def irc_to_course(course):
     """i.e.,#Engineering.EE-292L.Fall2014 -> Engineering/EE-292L/Fall2014"""
     return '/'.join(course.lstrip('#').split('.'))
 
+DESCRIPTION = "Generate hybserv2 v.1.9.4-release nick.db and chan.db files."
+
 def get_parsed_args():
-    parser = argparse.ArgumentParser(description="Generate hybserv2 v.1.9.4-release nick.db and chan.db files.",
-                                     epilog="Output files share the name of the input file, appended with '.new'")
+    parser = argparse.ArgumentParser(
+        description=DESCRIPTION,
+    )
     parser.add_argument(
         'nickfile',
         default='/tmp/nick.db',
