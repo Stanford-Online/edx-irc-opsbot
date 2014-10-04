@@ -183,9 +183,21 @@ def irc_to_course(course):
 def get_parsed_args():
     parser = argparse.ArgumentParser(description="Generate hybserv2 v.1.9.4-release nick.db and chan.db files.",
                                      epilog="Output files share the name of the input file, appended with '.new'")
-    parser.add_argument('nickfile', default='/tmp/nick.db', help="path to a nick.db file")
-    parser.add_argument('chanfile', default='/tmp/chan.db', help="path to a chan.db file")
-    parser.add_argument('configfile', default=CONFIG_FILE, help="path to course admin configuration")
+    parser.add_argument(
+        'nickfile',
+        default='/tmp/nick.db',
+        help="path to a nick.db file",
+    )
+    parser.add_argument(
+        'chanfile',
+        default='/tmp/chan.db',
+        help="path to a chan.db file",
+    )
+    parser.add_argument(
+        'configfile',
+        default=CONFIG_FILE,
+        help="path to course admin configuration",
+    )
     return parser.parse_args()
 
 def main():
