@@ -10,43 +10,62 @@ import os
 from path import path
 import yaml
 
-NOW_UNIX = datetime.now().strftime("%s")
+NOW = datetime.now()
+NOW_UNIX = NOW.strftime("%s")
+NOW_HUMAN =NOW.strftime("%a %b %d %H:%M:%S %Y")
 ROOT_PATH = path(__file__).abspath().dirname()
-CONFIG_FILE = ROOT_PATH.joinpath('config.yaml')
+FILE_CONFIG = ROOT_PATH.joinpath('config.yaml')
+HOSTLINE = "->HOST *~webchat@*.us-west-1.compute.internal"
+DESCRIPTION = "Generate hybserv2 v.1.9.4-release nick.db and chan.db files."
+DES_SALT_CHOICES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./"
+CHAN_DATA = {
+    'channel': '',
+    'dummy0': '4',
+    'founded': NOW_UNIX,
+    'updated': NOW_UNIX,
+    'otherlines': [
+        '->FNDR sysop {}'.format(NOW_UNIX),
+        '->PASS LZ5SxAssB3LX2',
+        '->ALVL -1 5 8 5 5 8 10 10 10 8 15 20 25 40 50',
+    ],
+    'ops_users': {
+        'sysop': (None, '50', NOW_UNIX, NOW_UNIX, '*As'),
+    }
+}
 
-def __crypt_cleartext(text, salt=None):
-    """Return cleartext text, crypted with salt salt."""
-    saltChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./"
-    if not salt: 
-        # Produce a random DES salt
-        salt = choice(saltChars) + choice(saltChars)
-    return crypt(text, salt)
+
+def __crypt_cleartext(text, random_des_salt=None):
+    """Return text crypted with random DES salt."""
+    if not random_des_salt:
+        random_des_salt = choice(DES_SALT_CHOICES) + choice(DES_SALT_CHOICES)
+    return crypt(text, random_des_salt)
 
 def add_users_to(userslist, nicks={}):
     """Given nicks dict, produce new nicks dict with userlist added.
 
     Allows user info update by specifying existing nicknames."""
-    def_hostline = "->HOST *~webchat@*.us-west-1.compute.internal"
     for username, cleartext in userslist:
         if not nicks.has_key(username):
-            nicks[username] = {'nick': username, 'interval': 14600, 'ctime': NOW_UNIX, 
-                               'seen': NOW_UNIX, 'otherlines': [def_hostline]}
+            nicks[username] = {
+                'nick': username,
+                'interval': 14600,
+                'ctime': NOW_UNIX,
+                'seen': NOW_UNIX,
+                'otherlines': [
+                    HOSTLINE,
+                ],
+            }
         nicks[username]['pass'] = __crypt_cleartext(cleartext)
     return nicks
 
 def add_channels_to(chanupdates, chandata={}):
     new_chandata = chandata.copy()
-    defaults = {'channel': '', 'dummy0': '4', 'founded': NOW_UNIX, 'updated': NOW_UNIX,
-                'otherlines': ['->FNDR sysop {}'.format(NOW_UNIX), 
-                               '->PASS LZ5SxAssB3LX2',
-                               '->ALVL -1 5 8 5 5 8 10 10 10 8 15 20 25 40 50'],
-                'ops_users': {'sysop': (None, '50', NOW_UNIX, NOW_UNIX, '*As')}}
     for update_data in chanupdates:
         channel = update_data['channel']
         if new_chandata.has_key(channel):
             new_chandata[channel].update(update_data)
         else:
-            new_update = defaults.copy()
+            new_update = CHAN_DATA.copy()
             new_update.update(update_data)
             new_chandata[channel] = new_update
     return new_chandata
@@ -56,17 +75,17 @@ def nick_db_entry(nickconfig):
     output += "\n".join(nickconfig['otherlines']) + "\n"
     return output
 
-def write_nickdb(nickdbfile, nicks):
-    header = "; Hybserv2 NickServ database auto-generated from edX data on {}\n".format(datetime.now().strftime("%a %b %d %H:%M:%S %Y"))
-    with open(nickdbfile, 'wb') as dbfile:
-        dbfile.write(header)
+def write_nickdb(file_nickdb, nicks):
+    header = "; Hybserv2 NickServ database auto-generated from edX data on {}\n".format(NOW_HUMAN)
+    with open(file_nickdb, 'wb') as file_out:
+        file_out.write(header)
         for nick in sorted(nicks.keys()):
-            dbfile.write(nick_db_entry(nicks[nick]))
+            file_out.write(nick_db_entry(nicks[nick]))
 
-def write_chandb(chandbfile, channels):
-    header = "; Hybserv2 ChanServ database auto-generated from edX data on {}\n".format(datetime.now().strftime("%a %b %d %H:%M:%S %Y"))
-    with open(chandbfile, 'wb') as dbfile:
-        dbfile.write(header)
+def write_chandb(file_chandb, channels):
+    header = "; Hybserv2 ChanServ database auto-generated from edX data on {}\n".format(NOW_HUMAN)
+    with open(file_chandb, 'wb') as file_out:
+        file_out.write(header)
         for ircchan in sorted(channels.keys()):
             chandata = channels[ircchan]
             output = "{channel} {dummy0} {founded} {updated}\n".format(**chandata)
@@ -78,13 +97,12 @@ def write_chandb(chandbfile, channels):
                 else:
                     hostspec = ''
                 output += "->ACCESS {}{} {} {} {} {}\n".format(username, hostspec, alvl, ctime, mtime, addedby)
-            dbfile.write(output)
+            file_out.write(output)
 
-def read_nickdb(nickdbfile):
+def read_nickdb(file_nickdb):
     """Read a nick.db file and return a dictionary of configured users and their user data"""
     nicks = {}
-    with open(nickdbfile, 'rb') as nickdb:
-        nick = ''
+    with open(file_nickdb, 'rb') as nickdb:
         for line in nickdb:
             if line[0] == ';': continue
             line = line.rstrip()
@@ -92,7 +110,13 @@ def read_nickdb(nickdbfile):
                 nick, interval, ctime, seen = line.split(' ')
                 if nicks.has_key(nick):
                     raise RuntimeError, "Malformed nick.db file detected - {} more than once in file".format(nick)
-                nicks[nick] = {"nick": nick, "interval": interval, "ctime": ctime, "seen": NOW_UNIX, 'otherlines': []}
+                nicks[nick] = {
+                    "nick": nick,
+                    "interval": interval,
+                    "ctime": ctime,
+                    "seen": NOW_UNIX,
+                    'otherlines': [],
+                }
             elif line[:2] == "->":
                 if not nick:
                     raise RuntimeError, "Malformed nick.db file, at least one bad stanza definition"
@@ -102,10 +126,10 @@ def read_nickdb(nickdbfile):
                     nicks[nick]['otherlines'].append(line)
     return nicks
 
-def read_chandb(chandbfile):
+def read_chandb(file_chandb):
     """Read a nick.db file and return a dictionary of configured users and their user data"""
     chans = {}
-    with open(chandbfile, 'rb') as chandb:
+    with open(file_chandb, 'rb') as chandb:
         for line in chandb:
             if line[0] == ';': continue
             line = line.rstrip()
@@ -113,8 +137,14 @@ def read_chandb(chandbfile):
                 channel, dummy0, founded, updated = line.split(' ')
                 if chans.has_key(channel):
                     raise RuntimeError, "Malformed chan.db file detected - {} more than once in file".format(channel)
-                chans[channel] = {'channel': channel, 'dummy0': dummy0, 'founded': founded, 'updated': NOW_UNIX, 
-                                  'ops_users': {}, 'otherlines': []}
+                chans[channel] = {
+                    'channel': channel,
+                    'dummy0': dummy0,
+                    'founded': founded,
+                    'updated': NOW_UNIX,
+                    'ops_users': {},
+                    'otherlines': [],
+                }
             elif line[:2] == "->":
                 if line[:8] == "->ACCESS":
                     splitline = line.split(' ')
@@ -130,27 +160,27 @@ def read_chandb(chandbfile):
                     chans[channel]['otherlines'].append(line)
     return chans
 
-def read_config(cfile=CONFIG_FILE, chandata={}):
-    """Read channel configuration from cfile, use settings to shadow vars in shadow.
-    
-    If no configuration file found at specified path, and if chandata is non-empty, 
+def read_config(file_config=FILE_CONFIG, chandata={}):
+    """Read channel configuration from file_config, use settings to shadow vars in shadow.
+
+    If no configuration file found at specified path, and if chandata is non-empty,
     a new configuration file containing chandata will be created."""
-    if os.path.exists(cfile):
-        with open(cfile, 'rb') as c:
+    if os.path.exists(file_config):
+        with open(file_config, 'rb') as c:
             return yaml.load(c)
 
     new_config = {}
     for chan in sorted(chandata.keys()):
         chan = irc_to_course(chan)
         new_config[chan] = [
-                "bad password. update this from https://class.stanford.edu/courses/COURSE_ID_TRIPLE/instructor/api/irc_instructor_auth_token",
+            "bad password. update this from https://class.stanford.edu/courses/COURSE_ID_TRIPLE/instructor/api/irc_instructor_auth_token",
             sorted([x for x in chandata[chan]['ops_users']])]
     if new_config:
-        print "Missing file at {}".format(cfile)
+        print "Missing file at {}".format(file_config)
         print "Warning, no configuration file found. One will be created from your current"
         print "    database files, and your database files will only get written to update"
         print "    sort entries and update usage timestamps."
-        with open(cfile, 'wb') as c:
+        with open(file_config, 'wb') as c:
             yaml.dump(new_config, c, width=120, indent=2, canonical=False, default_flow_style=False)
     return new_config
 
@@ -158,16 +188,21 @@ def merge_dbs_configs(nick_db_in, chan_db_in, config):
     """Merge data from config into data from dbs, return new db data."""
     userlist = []
     chanlist = []
-    def_opslist = {'sysop': (None, '50', '1403044603', '1403044603', '*As'),}
-    def_useropts = ('~webchat@*', '11', '1403306438', '1405369523', 'sysop')
+    default_opslist = {
+        'sysop': (None, '50', '1403044603', '1403044603', '*As'),
+    }
+    default_useropts = ('~webchat@*', '11', '1403306438', '1405369523', 'sysop')
     for course in sorted(config.keys()):
-        coursepass = config[course][0]
+        password = config[course][0]
         courseusers = sorted(config[course][1])
-        opslist = def_opslist.copy()
+        opslist = default_opslist.copy()
         for user in courseusers:
-            userlist.append((user, coursepass))
-            opslist[user] = def_useropts
-        chanlist.append({'channel': course_to_irc(course), 'ops_users': opslist})
+            userlist.append((user, password))
+            opslist[user] = default_useropts
+        chanlist.append({
+            'channel': course_to_irc(course),
+            'ops_users': opslist
+        })
     nick_db_out = add_users_to(userlist, nick_db_in)
     chan_db_out = add_channels_to(chanlist, chan_db_in)
     return nick_db_out, chan_db_out
@@ -181,25 +216,43 @@ def irc_to_course(course):
     return '/'.join(course.lstrip('#').split('.'))
 
 def get_parsed_args():
-    parser = argparse.ArgumentParser(description="Generate hybserv2 v.1.9.4-release nick.db and chan.db files.",
-                                     epilog="Output files share the name of the input file, appended with '.new'")
-    parser.add_argument('nickfile', default='/tmp/nick.db', help="path to a nick.db file")
-    parser.add_argument('chanfile', default='/tmp/chan.db', help="path to a chan.db file")
-    parser.add_argument('configfile', default=CONFIG_FILE, help="path to course admin configuration")
+    parser = argparse.ArgumentParser(
+        description=DESCRIPTION,
+    )
+    parser.add_argument(
+        'file_nickdb',
+        default='/tmp/nick.db',
+        help="path to a nick.db file",
+    )
+    parser.add_argument(
+        'file_chandb',
+        default='/tmp/chan.db',
+        help="path to a chan.db file",
+    )
+    parser.add_argument(
+        'file_config',
+        default=FILE_CONFIG,
+        help="path to course admin configuration",
+    )
+    parser.add_argument(
+        '--suffix',
+        default='.new',
+        help='output_file = input_file + suffix',
+    )
     return parser.parse_args()
 
 def main():
     """Drive. Parse arguments, do file I/o, set up work."""
     args = get_parsed_args()
 
-    nicks = read_nickdb(args.nickfile)
-    chans = read_chandb(args.chanfile)
-    config = read_config(cfile=args.configfile)
+    nicks = read_nickdb(args.file_nickdb)
+    chans = read_chandb(args.file_chandb)
+    config = read_config(file_config=args.file_config)
 
     nicks, chans = merge_dbs_configs(nicks, chans, config)
 
-    write_nickdb(args.nickfile+'.new', nicks)
-    write_chandb(args.chanfile+'.new', chans)
+    write_nickdb(args.file_nickdb + args.suffix, nicks)
+    write_chandb(args.file_chandb + args.suffix, chans)
 
 if __name__ == "__main__":
     main()
